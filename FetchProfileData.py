@@ -14,11 +14,11 @@ def getHeroStats(pageContent):
     #TODO parse the page to find winrates, lvl, games played etc.
 
 def getMapStats(pageContent):
-	pass
-    #Todo parse the page to find all map winrates and games played
+    pass
+    #TODO parse the page to find all map winrates and games played
 
 def getWinratesAgainstHeroes(pageContent):
-	pass
+    pass
     #TODO parse the page to find winrates against other heroes
 
 
