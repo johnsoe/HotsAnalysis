@@ -1,7 +1,8 @@
 from lxml import html, cssselect
 import requests
-from profile import HeroStats, MapStats, EnemyHeroStats
+from profile import HeroStats, MapStats, EnemyHeroStats, Profile
 from HotslogsIds import HotslogsIds
+from pymongo import MongoClient
 
 # print the MMR of the given player in all leagues
 def printPlayerStats(player):
@@ -15,7 +16,7 @@ def getFullPageStats(playerId):
 
 # parse the given page for all player's hero statistics
 def getHeroesStats(pageContent):
-    allHeroStats = [];
+    allHeroStats = []
     allPlayedHeroes = pageContent.get_element_by_id(HotslogsIds.heroTableId).cssselect("tbody tr")
     for heroElement in allPlayedHeroes:
         cols = heroElement.cssselect("td")
@@ -28,7 +29,7 @@ def getHeroesStats(pageContent):
 
 # parse the given page for all map statistics
 def getMapStats(pageContent):
-    allMapStats = [];
+    allMapStats = []
     allMaps = pageContent.get_element_by_id(HotslogsIds.mapTableId).cssselect("tbody tr")
     for mapElement in allMaps:
         cols = mapElement.cssselect("td")
@@ -40,7 +41,7 @@ def getMapStats(pageContent):
 
 # parse the given page for all opposing hero winrates
 def getWinratesAgainstHeroes(pageContent):
-    allEnemyStats = [];
+    allEnemyStats = []
     allEnemies = pageContent.get_element_by_id(HotslogsIds.enemyHeroesId).cssselect("tbody tr")
     for enemyElement in allEnemies:
         cols = enemyElement.cssselect("td")
@@ -50,23 +51,26 @@ def getWinratesAgainstHeroes(pageContent):
         allEnemyStats.append(enemyStat)
     return allEnemyStats
 
-# printPlayerStats("ralphstew_1376")
-# printPlayerStats("schweik_1154")
-# printPlayerStats("appleeater_1151")
+def fetchProfile (profileId):
+    profile = Profile(str(profileId))
+    playerPage = getFullPageStats(profile.hotslogsId)
+    profile.heroes = getHeroesStats(playerPage)
+    profile.maps = getMapStats(playerPage)
+    profile.enemies = getWinratesAgainstHeroes(playerPage)
+    return profile
 
-# Update the number here to get a different player's profile
-playerPage = getFullPageStats("5032724")
-heroStatsList = getHeroesStats(playerPage)
-print "Player heroes"
-for hero in heroStatsList:
-    print hero
-print ""
-print "Map Stats"
-mapStatsList = getMapStats(playerPage)
-for aMap in mapStatsList:
-    print aMap
-print ""
-print "Opposing Heroes"
-enemyHeroesStatsList = getWinratesAgainstHeroes(playerPage)
-for enemy in enemyHeroesStatsList:
-    print enemy
+
+#default port and host for mongodb instance running locally. would normally hit the server hosting our data
+client = MongoClient('localhost', 27017)
+#default db- we would want to create our own but wouldn't do that here
+db = client.test;
+
+# Normally this would be called after the match is parsed with all the match player profiles. 
+matchProfiles = [5032724, 5434184, 5559464]
+
+#TODO: check DB first to make sure we don't already have that data.
+#profileData = [db.profiles.find({"hotslogsId": hotsId}) for hotsId in matchProfiles]
+profiles = [fetchProfile(pId) for pId in matchProfiles]
+profilesAsJSON = [profile.toJSON() for profile in profiles]
+if profilesAsJSON:
+    db.profiles.insert_many(profilesAsJSON)
