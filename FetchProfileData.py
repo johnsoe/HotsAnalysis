@@ -59,19 +59,23 @@ def fetchProfile (profileId):
     profile.enemies = getWinratesAgainstHeroes(playerPage)
     return profile
 
+def storeProfilesInDB (profileIds):
 
-#ssh -L 4321:localhost:27017 root@159.203.241.78 -f -N I have setup a local alias to hit the server
-#need ssh key to work
-client = MongoClient('localhost', 4321)
-#default db- we would want to create our own but wouldn't do that here
-db = client.hots;
+    #ssh -L 4321:localhost:27017 root@159.203.241.78 -f -N 
+    #I have setup a local alias to hit the server
+    #need ssh key to work
+    client = MongoClient('localhost', 4321)
+    #default db- we would want to create our own but wouldn't do that here
+    db = client.hots;
 
-# Normally this would be called after the match is parsed with all the match player profiles. 
-matchProfiles = [5032724, 5434184, 5559464]
+    profilesToInsert = []
+    for pId in profileIds:
+        if db.profiles.find({"hotslogsId": str(pId)}).count() == 0:
+            profilesToInsert.append(pId)
 
-#TODO: check DB first to make sure we don't already have that data.
-#profileData = [db.profiles.find({"hotslogsId": hotsId}) for hotsId in matchProfiles]
-profiles = [fetchProfile(pId) for pId in matchProfiles]
-profilesAsJSON = [profile.toJSON() for profile in profiles]
-if profilesAsJSON:
-    db.profiles.insert_many(profilesAsJSON)
+    #TODO: check DB first to make sure we don't already have that data.
+    #profileData = [db.profiles.find({"hotslogsId": hotsId}) for hotsId in matchProfiles]
+    profiles = [fetchProfile(pId) for pId in profilesToInsert]
+    profilesAsJSON = [profile.toJSON() for profile in profiles]
+    if profilesAsJSON:
+        db.profiles.insert_many(profilesAsJSON)
