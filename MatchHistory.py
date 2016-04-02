@@ -3,10 +3,12 @@ from bs4 import BeautifulSoup
 import re
 import csv
 import FetchProfileData
+from datetime import datetime
 
-outfile = open("./output.csv", "wb")
+outfile = open("./output.csv", "a")
 uniquePlayerIds = []
-for gamenumber in range(68700000, 68700100): 
+print "Starting game load" + str(datetime.now().time())
+for gamenumber in range(68702903, 68703903): 
 
     url = 'http://www.hotslogs.com/Player/MatchSummaryAjax?ReplayID=' + str(gamenumber)
     response = requests.get(url)
@@ -22,8 +24,8 @@ for gamenumber in range(68700000, 68700100):
 
     #Find Player ID's    
     for a in table.find_all('a'):
-        t= re.findall('(?<=Profile\?PlayerID\=)\d*',a['href'])
-        if t:
+        t = re.findall('(?<=Profile\?PlayerID\=)\d*',a['href'])
+        if t and t[0]:
             player.append(t[0])
 
     #Make sure there are ten players with profiles in the game, otherwise ignore game
@@ -59,4 +61,5 @@ for gamenumber in range(68700000, 68700100):
     writer.writerow(list_of_rows)
     #id="MatchSummary_h3MapName"
 outfile.close()
+print "Ending game load" + str(datetime.now().time())
 FetchProfileData.storeProfilesInDB(uniquePlayerIds)

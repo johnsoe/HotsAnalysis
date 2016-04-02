@@ -3,6 +3,9 @@ import requests
 from profile import HeroStats, MapStats, EnemyHeroStats, Profile
 from HotslogsIds import HotslogsIds
 from pymongo import MongoClient
+from datetime import datetime
+from Queue import Queue
+from threading import Thread 
 
 # print the MMR of the given player in all leagues
 def printPlayerStats(player):
@@ -57,7 +60,7 @@ def fetchProfile (profileId):
     profile.heroes = getHeroesStats(playerPage)
     profile.maps = getMapStats(playerPage)
     profile.enemies = getWinratesAgainstHeroes(playerPage)
-    return profile
+    return profile.toJSON()
 
 def storeProfilesInDB (profileIds):
 
@@ -68,14 +71,33 @@ def storeProfilesInDB (profileIds):
     #default db- we would want to create our own but wouldn't do that here
     db = client.hots;
 
+    print "Checking DB for ids " + str(datetime.now().time())
     profilesToInsert = []
     for pId in profileIds:
         if db.profiles.find({"hotslogsId": str(pId)}).count() == 0:
             profilesToInsert.append(pId)
+    print len(profileIds) - len(profilesToInsert)
 
-    #TODO: check DB first to make sure we don't already have that data.
-    #profileData = [db.profiles.find({"hotslogsId": hotsId}) for hotsId in matchProfiles]
-    profiles = [fetchProfile(pId) for pId in profilesToInsert]
-    profilesAsJSON = [profile.toJSON() for profile in profiles]
-    if profilesAsJSON:
-        db.profiles.insert_many(profilesAsJSON)
+    profiles = []
+    print "Querying hotslogs for profiles " + str(datetime.now().time())
+    def worker():
+        while True:
+            item = q.get()
+            profiles.append(fetchProfile(item))
+            q.task_done()
+
+    q = Queue()
+    for i in range(100):
+         t = Thread(target=worker)
+         t.daemon = True
+         t.start()
+
+    for item in profileIds:
+        q.put(item)
+
+    q.join()
+
+    print "Profiles Loaded " + str(datetime.now().time())
+    if profiles and len(profiles) > 0:
+        db.profiles.insert_many(profiles)
+        print "Profiles stored remotely " + str(datetime.now().time())
