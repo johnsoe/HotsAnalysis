@@ -4,8 +4,7 @@ from profile import HeroStats, MapStats, EnemyHeroStats, Profile
 from HotslogsIds import HotslogsIds
 from pymongo import MongoClient
 from datetime import datetime
-from Queue import Queue
-from threading import Thread 
+import threadtask
 
 # print the MMR of the given player in all leagues
 def printPlayerStats(player):
@@ -62,6 +61,7 @@ def fetchProfile (profileId):
     profile.enemies = getWinratesAgainstHeroes(playerPage)
     return profile.toJSON()
 
+
 def storeProfilesInDB (profileIds):
 
     #ssh -L 4321:localhost:27017 root@159.203.241.78 -f -N 
@@ -70,32 +70,17 @@ def storeProfilesInDB (profileIds):
     client = MongoClient('localhost', 4321)
     #default db- we would want to create our own but wouldn't do that here
     db = client.hots;
-
-    print "Checking DB for ids " + str(datetime.now().time())
-    profilesToInsert = []
-    for pId in profileIds:
-        if db.profiles.find({"hotslogsId": str(pId)}).count() == 0:
-            profilesToInsert.append(pId)
-    print len(profileIds) - len(profilesToInsert)
-
     profiles = []
-    print "Querying hotslogs for profiles " + str(datetime.now().time())
-    def worker():
+    def dbCheck (q):
         while True:
             item = q.get()
-            profiles.append(fetchProfile(item))
+            if db.profiles.find({"hotslogsId": str(item)}).count() == 0:
+                profiles.append(fetchProfile(item))
             q.task_done()
 
-    q = Queue()
-    for i in range(100):
-         t = Thread(target=worker)
-         t.daemon = True
-         t.start()
-
-    for item in profileIds:
-        q.put(item)
-
-    q.join()
+    print "Checking DB for ids " + str(datetime.now().time())
+    threadtask.executeTask(dbCheck, profileIds)
+    print "repeat profile count: " + str(len(profileIds) - len(profiles))
 
     print "Profiles Loaded " + str(datetime.now().time())
     if profiles and len(profiles) > 0:
