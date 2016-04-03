@@ -1,23 +1,23 @@
 from lxml import html, cssselect
-import requests
 from profile import HeroStats, MapStats, EnemyHeroStats, Profile
-from HotslogsIds import HotslogsIds
+from hotslogsids import HotslogsIds
 from pymongo import MongoClient
 from datetime import datetime
+import requests
 import threadtask
 
 # print the MMR of the given player in all leagues
-def printPlayerStats(player):
+def print_player_stats(player):
     response = requests.get('http://www.hotslogs.com/API/Players/1/' + player)
     print response.json()
 
 # return full profile of requested player
-def getFullPageStats(playerId):
+def get_full_page_stats(playerId):
     response = requests.get("http://www.hotslogs.com/Player/Profile?PlayerID=" + playerId)
     return html.fromstring(response.content)
 
 # parse the given page for all player's hero statistics
-def getHeroesStats(pageContent):
+def get_heroes_stats(pageContent):
     allHeroStats = []
     allPlayedHeroes = pageContent.get_element_by_id(HotslogsIds.heroTableId).cssselect("tbody tr")
     for heroElement in allPlayedHeroes:
@@ -30,7 +30,7 @@ def getHeroesStats(pageContent):
     return allHeroStats
 
 # parse the given page for all map statistics
-def getMapStats(pageContent):
+def get_map_stats(pageContent):
     allMapStats = []
     allMaps = pageContent.get_element_by_id(HotslogsIds.mapTableId).cssselect("tbody tr")
     for mapElement in allMaps:
@@ -42,7 +42,7 @@ def getMapStats(pageContent):
     return allMapStats
 
 # parse the given page for all opposing hero winrates
-def getWinratesAgainstHeroes(pageContent):
+def get_winrates_against_heroes(pageContent):
     allEnemyStats = []
     allEnemies = pageContent.get_element_by_id(HotslogsIds.enemyHeroesId).cssselect("tbody tr")
     for enemyElement in allEnemies:
@@ -53,17 +53,16 @@ def getWinratesAgainstHeroes(pageContent):
         allEnemyStats.append(enemyStat)
     return allEnemyStats
 
-def fetchProfile (profileId):
+def fetch_profile (profileId):
     profile = Profile(str(profileId))
-    playerPage = getFullPageStats(profile.hotslogsId)
-    profile.heroes = getHeroesStats(playerPage)
-    profile.maps = getMapStats(playerPage)
-    profile.enemies = getWinratesAgainstHeroes(playerPage)
+    playerPage = get_full_page_stats(profile.hotslogsId)
+    profile.heroes = get_heroes_stats(playerPage)
+    profile.maps = get_map_stats(playerPage)
+    profile.enemies = get_winrates_against_heroes(playerPage)
     return profile.toJSON()
 
 
-def storeProfilesInDB (profileIds):
-
+def store_profiles_in_db (profile_ids):
     #ssh -L 4321:localhost:27017 root@159.203.241.78 -f -N 
     #I have setup a local alias to hit the server
     #need ssh key to work
@@ -71,16 +70,16 @@ def storeProfilesInDB (profileIds):
     #default db- we would want to create our own but wouldn't do that here
     db = client.hots;
     profiles = []
-    def dbCheck (q):
+    def db_check (q):
         while True:
             item = q.get()
             if db.profiles.find({"hotslogsId": str(item)}).count() == 0:
-                profiles.append(fetchProfile(item))
+                profiles.append(fetch_profile(item))
             q.task_done()
 
-    print "Checking DB for ids " + str(datetime.now().time())
-    threadtask.executeTask(dbCheck, profileIds)
-    print "repeat profile count: " + str(len(profileIds) - len(profiles))
+    print "Checking DB for ids and getting profiles" + str(datetime.now().time())
+    threadtask.execute_task(db_check, profile_ids)
+    print "repeat profile count: " + str(len(profile_ids) - len(profiles))
 
     print "Profiles Loaded " + str(datetime.now().time())
     if profiles and len(profiles) > 0:

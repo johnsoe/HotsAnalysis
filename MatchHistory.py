@@ -1,21 +1,20 @@
-import requests
 from bs4 import BeautifulSoup
+from datetime import datetime
+import requests
 import re
 import csv
-import FetchProfileData
-from datetime import datetime
+import fetchprofile
 import threading
 import threadtask
 
-
 outfile = open("./outputA.csv", "a")
 writer = csv.writer(outfile)
-uniquePlayerIds = []
-matchIds = range(68703031, 68703131)
-csvWriteLock = threading.Lock()
+unique_player_ids = []
+match_ids = range(68703332, 68708332)
+csv_write_lock = threading.Lock()
 print "Starting game load " + str(datetime.now().time())
 
-def parseMatch(q):
+def parse_match(q):
     while True:
         url = 'http://www.hotslogs.com/Player/MatchSummaryAjax?ReplayID=' + str(q.get())
         response = requests.get(url)
@@ -23,7 +22,7 @@ def parseMatch(q):
         soup = BeautifulSoup(html,"lxml")
 
         player=[];
-        mapName = soup.find('h3', attrs={'id': "MatchSummary_h3MapName"}).text
+        map_name = soup.find('h3', attrs={'id': "MatchSummary_h3MapName"}).text
         table = soup.find('table', attrs={'class': 'rgMasterTable'})
         
         #Sometimes there is no html on page
@@ -42,13 +41,12 @@ def parseMatch(q):
             q.task_done()
             continue
         else:
-            print player
-            for playerId in player:
-                if playerId not in uniquePlayerIds:
-                    uniquePlayerIds.append(playerId)
+            for player_id in player:
+                if player_id not in unique_player_ids:
+                    unique_player_ids.append(player_id)
 
         #Find Match Details
-        list_of_rows = [mapName]
+        list_of_rows = [map_name]
         ind=-1
         for row in table.findAll('tr'):
             list_of_cells = []
@@ -65,11 +63,11 @@ def parseMatch(q):
                 list_of_cells[0]=player[ind]
                 for i in range(0, len(list_of_cells)):
                     list_of_rows.append(list_of_cells[i])
-        with csvWriteLock:
+        with csv_write_lock:
             writer.writerow(list_of_rows)
         q.task_done()
 
-threadtask.executeTask(parseMatch, matchIds)
+threadtask.execute_task(parse_match, match_ids)
 outfile.close()
 print "Ending game load " + str(datetime.now().time())
-FetchProfileData.storeProfilesInDB(uniquePlayerIds)
+fetchprofile.store_profiles_in_db(unique_player_ids)

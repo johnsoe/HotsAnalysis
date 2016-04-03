@@ -1,6 +1,6 @@
 from Queue import Queue
 from threading import Thread
-def executeTask(worker, source):
+def execute_task(worker, source):
 	q = Queue()
 	for i in range(100):
 	     t = Thread(target=worker, args=(q,))
