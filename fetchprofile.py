@@ -77,7 +77,7 @@ def store_profiles_in_db (profile_ids):
                 profiles.append(fetch_profile(item))
             q.task_done()
 
-    print "Checking DB for ids and getting profiles" + str(datetime.now().time())
+    print "Checking DB for ids and getting profiles " + str(datetime.now().time())
     threadtask.execute_task(db_check, profile_ids)
     print "repeat profile count: " + str(len(profile_ids) - len(profiles))
 
