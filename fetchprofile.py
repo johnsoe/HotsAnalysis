@@ -63,11 +63,7 @@ def fetch_profile (profileId):
 
 
 def store_profiles_in_db (profile_ids):
-    #ssh -L 4321:localhost:27017 root@159.203.241.78 -f -N 
-    #I have setup a local alias to hit the server
-    #need ssh key to work
     client = MongoClient('localhost', 4321)
-    #default db- we would want to create our own but wouldn't do that here
     db = client.hots;
     profiles = []
     def db_check (q):
